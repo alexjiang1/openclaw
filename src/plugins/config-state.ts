@@ -55,6 +55,7 @@ export const BUNDLED_ENABLED_BY_DEFAULT = new Set<string>([
   "sglang",
   "synthetic",
   "talk-voice",
+  "tavily",
   "together",
   "venice",
   "vercel-ai-gateway",
