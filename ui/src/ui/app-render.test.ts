@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { AppViewState } from "./app-view-state.ts";
 
 // Import the function and regex patterns
 // Note: These are private in app-render.ts, so we'll test through the public API
@@ -12,10 +11,15 @@ const AVATAR_HTTP_RE = /^https?:\/\//i;
  * Extracted logic from resolveAssistantAvatarUrl for testing
  * This mirrors the implementation in app-render.ts
  */
-function resolveAssistantAvatarUrl(state: AppViewState): string | undefined {
-  const list = state.agentsList?.agents ?? [];
-  const agentId = state.agentsList?.defaultId ?? "main";
-  const agent = list.find((entry) => entry.id === agentId);
+function resolveAssistantAvatarUrl(state: unknown): string | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s = state as any;
+  const list = s.agentsList?.agents ?? [];
+  const agentId = s.agentsList?.defaultId ?? "main";
+  const agent = list.find((entry: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (entry as any).id === agentId;
+  });
   const identity = agent?.identity;
   // Prefer avatarUrl (which should be a data URL or HTTP URL from backend)
   // Validate it to ensure it's a safe URL before using
@@ -34,7 +38,7 @@ function resolveAssistantAvatarUrl(state: AppViewState): string | undefined {
 describe("resolveAssistantAvatarUrl", () => {
   describe("avatarUrl priority (backend-processed)", () => {
     it("returns avatarUrl when it is a data URL", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -49,7 +53,7 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe(
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -57,7 +61,7 @@ describe("resolveAssistantAvatarUrl", () => {
     });
 
     it("returns avatarUrl when it is an HTTP URL", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -71,13 +75,13 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe("https://example.com/avatar.png");
     });
 
     it("returns avatarUrl when it is an HTTPS URL", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -91,7 +95,7 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe("https://cdn.example.com/avatars/lumi.png");
     });
@@ -99,7 +103,7 @@ describe("resolveAssistantAvatarUrl", () => {
 
   describe("avatar fallback (raw config field)", () => {
     it("returns avatar when avatarUrl is undefined and avatar is HTTP URL", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -113,13 +117,13 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe("http://example.com/avatar.png");
     });
 
     it("returns avatar when avatarUrl is undefined and avatar is data URL", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -133,7 +137,7 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe("data:image/png;base64,ABC123");
     });
@@ -143,7 +147,7 @@ describe("resolveAssistantAvatarUrl", () => {
     it("returns avatar when avatarUrl is empty string and avatar is HTTP URL (the bug fix)", () => {
       // This is the critical edge case that the fix addresses
       // Empty string should be treated as absent, not as a valid URL
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -158,13 +162,13 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe("https://example.com/avatar.png");
     });
 
     it("returns undefined when avatarUrl is empty string and avatar is local path", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -179,13 +183,13 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBeUndefined();
     });
 
     it("returns undefined when both avatarUrl and avatar are undefined", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -198,13 +202,13 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBeUndefined();
     });
 
     it("returns undefined when both avatarUrl and avatar are empty strings", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -219,13 +223,13 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBeUndefined();
     });
 
     it("returns undefined when avatarUrl is invalid URL and avatar is local path", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -240,7 +244,7 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBeUndefined();
     });
@@ -248,7 +252,7 @@ describe("resolveAssistantAvatarUrl", () => {
 
   describe("URL validation", () => {
     it("rejects avatarUrl with relative path", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -262,13 +266,13 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBeUndefined();
     });
 
     it("rejects avatar with relative path", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -282,13 +286,13 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBeUndefined();
     });
 
     it("accepts data URL with uppercase DATA prefix", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -302,13 +306,13 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe("DATA:image/png;base64,ABC123");
     });
 
     it("accepts HTTP URL (not just HTTPS)", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -322,7 +326,7 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe("http://example.com/avatar.png");
     });
@@ -330,28 +334,28 @@ describe("resolveAssistantAvatarUrl", () => {
 
   describe("missing agent or identity", () => {
     it("returns undefined when agent list is empty", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [],
           defaultId: "main",
         },
         sessionKey: "main",
-      } as unknown as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBeUndefined();
     });
 
     it("returns undefined when agentsList is undefined", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: undefined,
         sessionKey: "main",
-      } as unknown as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBeUndefined();
     });
 
     it("returns undefined when agent identity is undefined", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -362,7 +366,7 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBeUndefined();
     });
@@ -370,7 +374,7 @@ describe("resolveAssistantAvatarUrl", () => {
 
   describe("avatarUrl takes priority over avatar", () => {
     it("returns avatarUrl when both avatarUrl and avatar are valid URLs", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -385,7 +389,7 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe(
         "https://backend.example.com/avatar-processed.png",
@@ -393,7 +397,7 @@ describe("resolveAssistantAvatarUrl", () => {
     });
 
     it("returns avatarUrl (data URL) even when avatar is HTTP URL", () => {
-      const state: AppViewState = {
+      const state = {
         agentsList: {
           agents: [
             {
@@ -408,7 +412,7 @@ describe("resolveAssistantAvatarUrl", () => {
           defaultId: "main",
         },
         sessionKey: "main",
-      } as AppViewState;
+      } as unknown;
 
       expect(resolveAssistantAvatarUrl(state)).toBe("data:image/png;base64,ABC123");
     });
