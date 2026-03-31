@@ -36,6 +36,7 @@ import { createFeishuClient } from "./client.js";
 import { finalizeFeishuMessageProcessing, tryRecordMessagePersistent } from "./dedup.js";
 import { maybeCreateDynamicAgent } from "./dynamic-agent.js";
 import { extractMentionTargets, isMentionForwardRequest } from "./mention.js";
+import { isFeishuUnsupportedPlaceholder } from "./message-content.js";
 import {
   resolveFeishuGroupConfig,
   resolveFeishuReplyPolicy,
@@ -655,6 +656,29 @@ export async function handleFeishuMessage(params: {
           log(`feishu[${account.accountId}]: failed to send ACP init error reply: ${String(err)}`);
         });
         return;
+      }
+    }
+
+    // Some Feishu inbound events downgrade card/share messages to a generic unsupported placeholder.
+    // When that happens, fetch the authoritative message record and parse it again, regardless of
+    // the event's declared message_type.
+    if (!ctx.content.trim() || isFeishuUnsupportedPlaceholder(ctx.content)) {
+      try {
+        const fetched = await getMessageFeishu({
+          cfg,
+          messageId: ctx.messageId,
+          accountId: account.accountId,
+        });
+        if (fetched?.content && fetched.content !== ctx.content) {
+          ctx = { ...ctx, content: fetched.content, contentType: fetched.contentType };
+          log(
+            `feishu[${account.accountId}]: enriched interactive card content for ${ctx.messageId}`,
+          );
+        }
+      } catch (err) {
+        log(
+          `feishu[${account.accountId}]: failed to enrich interactive content for ${ctx.messageId}: ${String(err)}`,
+        );
       }
     }
 
