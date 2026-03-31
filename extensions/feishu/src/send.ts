@@ -5,7 +5,7 @@ import { resolveFeishuRuntimeAccount } from "./accounts.js";
 import { createFeishuClient } from "./client.js";
 import type { MentionTarget } from "./mention.js";
 import { buildMentionedMessage, buildMentionedCardContent } from "./mention.js";
-import { parsePostContent } from "./post.js";
+import { parseFeishuMessageBodyContent } from "./message-content.js";
 import { getFeishuRuntime } from "./runtime.js";
 import { assertFeishuMessageApiSuccess, toFeishuSendResult } from "./send-result.js";
 import { resolveFeishuSendTarget } from "./send-target.js";
@@ -214,44 +214,8 @@ function parseInteractiveCardContent(parsed: unknown): string {
 }
 
 function parseFeishuMessageContent(rawContent: string, msgType: string): string {
-  if (!rawContent) {
-    return "";
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(rawContent);
-  } catch {
-    return rawContent;
-  }
-
-  if (msgType === "text") {
-    const text = (parsed as { text?: unknown })?.text;
-    return typeof text === "string" ? text : "[Text message]";
-  }
-
-  if (msgType === "post") {
-    return parsePostContent(rawContent).textContent;
-  }
-
-  if (msgType === "interactive") {
-    return parseInteractiveCardContent(parsed);
-  }
-
-  if (typeof parsed === "string") {
-    return parsed;
-  }
-
-  const genericText = (parsed as { text?: unknown; title?: unknown } | null)?.text;
-  if (typeof genericText === "string" && genericText.trim()) {
-    return genericText;
-  }
-  const genericTitle = (parsed as { title?: unknown } | null)?.title;
-  if (typeof genericTitle === "string" && genericTitle.trim()) {
-    return genericTitle;
-  }
-
-  return `[${msgType || "unknown"} message]`;
+  // Use the centralized parser that handles interactive cards with title+URL.
+  return parseFeishuMessageBodyContent(rawContent, msgType);
 }
 
 function parseFeishuMessageItem(
